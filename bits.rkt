@@ -5,6 +5,11 @@
          hex-string->byte
          integer->hex-char
          hex-char->integer
+         byte-add
+         byte-or
+         byte-xor
+         byte>>
+         byte<<
          )
 
 ;; 字节转换为位表示
@@ -23,11 +28,12 @@
 
 ;; 字节的位表示转换为byte
 (define (bit-list->byte bit-list)
-  (define (iter product l)
-    (if (null? l) 
+  (define (iter product l count)
+    (if (or (null? l) 
+            (= count 0))
         product
-        (iter (+ (* 2 product) (car l)) (cdr l))))
-  (iter 0 bit-list))
+        (iter (+ (* 2 product) (car l)) (cdr l) (- count 1))))
+  (iter 0 bit-list 8))
 
 ;; 字节转化为十六进制字符串表示
 (define (byte->hex-string value)
@@ -113,3 +119,29 @@
              (if (xor (= a 1) (= b 1)) 1 0))
            byte1
            byte2))
+
+(define (byte<< byte count) 
+  (byte-shift 
+   (lambda (bit-list)
+     (list-tail
+      (append bit-list (build-list count (lambda (a) 0)))
+      count))
+   byte count))
+
+(define (byte>> byte count)
+  (byte-shift
+   (lambda (bit-list)
+     (define (pre-add-0 product count)
+       (if (= 0 count)
+           product
+           (pre-add-0 (cons 0 product) (- count 1))))
+     (pre-add-0 bit-list count))
+   byte count))
+
+(define (byte-shift bit-list-fun byte count)
+  (cond ((>= count 8) 0)
+        ((< count 0) (error "must be positive number " count))
+        ((= count 0) byte)
+        (else
+         (let ((bit-list (byte->bit-list byte)))
+           (bit-list->byte (bit-list-fun bit-list))))))
