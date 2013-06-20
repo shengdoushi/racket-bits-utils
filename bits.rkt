@@ -21,6 +21,14 @@
     (else
      (error "please input a byte : " value))))
 
+;; 字节的位表示转换为byte
+(define (bit-list->byte bit-list)
+  (define (iter product l)
+    (if (null? l) 
+        product
+        (iter (+ (* 2 product) (car l)) (cdr l))))
+  (iter 0 bit-list))
+
 ;; 字节转化为十六进制字符串表示
 (define (byte->hex-string value)
   (define (sub-byte->char subbyte)
@@ -79,5 +87,29 @@
             -10))
         (else
          (error "unknown hex-char->integer arg: " hex-char))))
-                                           
-  
+         
+;; 字节的与操作（位运算) 
+(define (byte-op fun byte1 byte2)
+  (let ((result-list 
+         (map fun
+              (byte->bit-list byte1)
+              (byte->bit-list byte2))))
+    (bit-list->byte result-list)))
+
+(define (byte-add byte1 byte2)
+  (byte-op (lambda (a b)
+             (if (and (= a 1) (= b 1)) 1 0))
+           byte1
+           byte2))
+
+(define (byte-or byte1 byte2)
+  (byte-op (lambda (a b)
+             (if (or (= a 1) (= b 1)) 1 0))
+           byte1
+           byte2))
+
+(define (byte-xor byte1 byte2)
+  (byte-op (lambda (a b)
+             (if (xor (= a 1) (= b 1)) 1 0))
+           byte1
+           byte2))
