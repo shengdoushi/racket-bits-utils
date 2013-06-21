@@ -10,6 +10,16 @@
          byte-xor
          byte>>
          byte<<
+         
+         integer->bit-list
+         bit-list->integer
+         hex-string->integer
+         
+         integer-add
+         integer-or
+         integer-xor
+         integer>>
+         integer<<
          )
 
 ;; 字节转换为位表示
@@ -129,14 +139,7 @@
    byte count))
 
 (define (byte>> byte count)
-  (byte-shift
-   (lambda (bit-list)
-     (define (pre-add-0 product count)
-       (if (= 0 count)
-           product
-           (pre-add-0 (cons 0 product) (- count 1))))
-     (pre-add-0 bit-list count))
-   byte count))
+  (integer>> byte count))
 
 (define (byte-shift bit-list-fun byte count)
   (cond ((>= count 8) 0)
@@ -145,3 +148,106 @@
         (else
          (let ((bit-list (byte->bit-list byte)))
            (bit-list->byte (bit-list-fun bit-list))))))
+
+;; integer ->bit-list
+(define (integer->bit-list value)
+  (define (iter value product)
+    (if (= 0 value)
+        product
+        (iter (quotient value 2)
+              (cons (remainder value 2) product))))
+  (iter value '()))
+
+  
+; bit-list->integer
+(define (bit-list->integer bit-list)
+  (define (iter product bit-list)
+    (if (null? bit-list)
+        product
+        (iter (+ (* 2 product) (car bit-list))
+              (cdr bit-list))))
+  (iter 0 bit-list))
+
+;hex-string->integer
+(define (hex-string->integer str)
+  (foldl (lambda (v result)
+           (+ (* 16 result) (hex-char->integer v)))
+         0
+         (string->list str)))
+
+;; 字节对齐 (前端补全0)
+(define (bit-list-byte-align bits)
+  (define (iter bits count)
+    (if (= 0 count)
+        bits
+        (iter (cons 0 bits) (- count 1))))
+  (if (= 0 (remainder (length bits) 8))
+      bits
+      (iter bits (- 8 (remainder (length bits) 8)))))
+
+;; right shift
+(define (integer>> value count)
+  (define (iter product bit-list count)
+    (if (= count 0)
+        product
+        (iter (+ (* 2 product) (car bit-list))
+              (cdr bit-list)
+              (- count 1))))
+  (let ((bit-list (integer->bit-list value)))
+    (cond ((>= count (length bit-list)) 0)
+          ((= count 0) value)
+          ((< count 0) (error "positive"))
+          (else
+           (iter 0 bit-list (- (length bit-list)count))))))
+           
+;; left shift
+(define (integer<< value count)
+  (define (iter product count)
+    (if (= 0 count)
+        product
+        (iter (* product 2) (- count 1))))
+  (let ((bit-list (integer->bit-list value)))
+    (cond ((= count 0) value)
+          ((< count 0) (error "positive"))
+          (else (iter value count)))))
+
+(define (integer-bit-op op val1 val2)
+  (define (pre-add-0 bits count)
+    (if (= 0 count) bits
+        (pre-add-0 (cons 0 bits) (- count 1))))
+  (let ((bits1 (integer->bit-list val1))
+        (bits2 (integer->bit-list val2)))
+    (let ((expand-length (max (length bits1) (length bits2))))
+      (bit-list->integer 
+       (map op
+            (pre-add-0 bits1 (- expand-length (length bits1)))
+            (pre-add-0 bits2 (- expand-length (length bits2))))))))
+
+;; add
+(define (integer-add val1 val2)
+  (integer-bit-op (lambda (a b)
+                         (if (and (= a 1) (= b 1))
+                             1
+                             0))
+                  val1
+                  val2))
+
+;; or
+(define (integer-or val1 val2)
+  (integer-bit-op (lambda (a b)
+                         (if (or (= a 1) (= b 1))
+                             1
+                             0))
+                  val1
+                  val2))
+
+;; xor
+(define (integer-xor val1 val2)
+  (integer-bit-op (lambda (a b)
+                         (if (= a b)
+                             1
+                             0))
+                  val1
+                  val2))
+                    
+
