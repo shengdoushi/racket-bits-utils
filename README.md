@@ -39,3 +39,25 @@ use to debug bytes
 (byte>> 3 1) => 1
 
 (byte<< 1 1) => 2
+
+;; also: integer
+
+integer-add
+
+integer-or
+
+integer-xor
+
+integer->bit-list
+
+bit-list->integer
+
+(hex-string->integer "FFFF") => 65535
+
+integer>>
+
+integer<<
+
+
+
+((make-lzss-default-decoder) in-port out-port)
