@@ -1,6 +1,7 @@
 #lang racket
 
 (provide byte->bit-list
+         bit-list->byte
          byte->hex-string
          hex-string->byte
          integer->hex-char
@@ -20,6 +21,14 @@
          integer-xor
          integer>>
          integer<<
+         integer->byte-list
+         
+         int32-add
+         int32-minus
+         int32-multiplier
+         int32>>
+         int32<<
+         int32->bytes
          )
 
 ;; 字节转换为位表示
@@ -250,4 +259,48 @@
                   val1
                   val2))
                     
+; integer->[byte]
+(define (integer->byte-list val)
+  (define (iter bits product)
+    (if (null? bits)
+        product
+        (iter (list-tail bits 8)
+              (append product (list (bit-list->integer (list 
+                                        (list-ref bits 0)
+                                        (list-ref bits 1)
+                                        (list-ref bits 2)
+                                        (list-ref bits 3)
+                                        (list-ref bits 4)
+                                        (list-ref bits 5)
+                                        (list-ref bits 6)
+                                        (list-ref bits 7))))))))
+  (iter (bit-list-byte-align (integer->bit-list val))
+        '()))
+
+
+(define (int32-add x y)
+  (bitwise-and (+ x y) #xFFFFFFFF))
+
+(define (int32-multiplier x y)
+  (bitwise-and (* x y) #xFFFFFFFF))
+(define (int32-minus x y)
+  (bitwise-and (- x y) #xFFFFFFFF))
+
+(define (integer->int32 value)
+  (bitwise-and value #xFFFFFFFF))
+
+(define (int32>> val count)
+  (integer->int32 (arithmetic-shift val (- count))))
+(define (int32<< val count)
+  (integer->int32 (arithmetic-shift val count)))
+
+(define (int32->bytes val)
+  (let ((buf (make-bytes 4))
+        (val (integer->int32 val)))
+    (bytes-set! buf 0 (bitwise-and val #x000000FF))
+    (bytes-set! buf 1 (int32>> (bitwise-and val #x0000FF00) 8))
+    (bytes-set! buf 2 (int32>> (bitwise-and val #x00FF0000) 16))
+    (bytes-set! buf 3 (int32>> (bitwise-and val #xFF000000) 24))
+    buf))
+  
 
