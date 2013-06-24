@@ -33,10 +33,10 @@
       ;; 读入第一个字节
       (define (pre-read-char)
         (set! flags (integer>> flags 1))
-        (cond ((= 0 (integer-add flags 256))
+        (cond ((= 0 (integer-and flags 256))
                (and (read-c)
                     (begin
-                      (set! flags (integer-or cread (hex-string->integer "FF00")))
+                      (set! flags (integer-or cread #xFF00))
                       #t)))
               (else
                #t)))
@@ -49,22 +49,22 @@
          (begin
            (write-byte cread outport)
            (bytes-set! text-buf r cread)
-           (set! r (integer-add (+ r 1) (- N 1))))))
+           (set! r (integer-and (+ r 1) (- N 1))))))
       
       ;; 读入下面的压缩过的内容
       (define (read-content-pack)
         (define (iter k)
           (when (<= k j)
-            (set! cread (bytes-ref text-buf (integer-add (+ i k) (- N 1))))
+            (set! cread (bytes-ref text-buf (integer-and (+ i k) (- N 1))))
             (write-byte cread outport)
             (bytes-set! text-buf r cread)
-            (set! r (integer-add (+ r 1) (- N 1)))
+            (set! r (integer-and (+ r 1) (- N 1)))
             (iter (+ k 1))))
         (and (read-i)
              (read-j)
              (begin
-               (set! i (integer-or i (integer<< (integer-add j (hex-string->byte "F0")) 4)))
-               (set! j (+ (integer-add j (hex-string->byte "0F")) THRESHOLD))
+               (set! i (integer-or i (integer<< (integer-and j #xF0) 4)))
+               (set! j (+ (integer-and j #x0F) THRESHOLD))
                (iter 0)
                )))
       
@@ -72,7 +72,7 @@
       (define (loop-iter)
         (let ((ret
                (and (pre-read-char)
-                    (if (not (= 0 (integer-add flags 1)))
+                    (if (not (= 0 (integer-and flags 1)))
                         (read-content-ori)
                         (read-content-pack)))))
           (when ret

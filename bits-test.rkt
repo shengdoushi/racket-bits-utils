@@ -1,7 +1,6 @@
 #lang racket
 (require "bits.rkt")
-
-
+  
 (define (output-int value)
   (display value)
   (newline)

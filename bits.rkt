@@ -6,7 +6,7 @@
          hex-string->byte
          integer->hex-char
          hex-char->integer
-         byte-add
+         byte-and
          byte-or
          byte-xor
          byte>>
@@ -16,7 +16,7 @@
          bit-list->integer
          hex-string->integer
          
-         integer-add
+         integer-and
          integer-or
          integer-xor
          integer>>
@@ -114,49 +114,20 @@
          (error "unknown hex-char->integer arg: " hex-char))))
          
 ;; 字节的与操作（位运算) 
-(define (byte-op fun byte1 byte2)
-  (let ((result-list 
-         (map fun
-              (byte->bit-list byte1)
-              (byte->bit-list byte2))))
-    (bit-list->byte result-list)))
-
-(define (byte-add byte1 byte2)
-  (byte-op (lambda (a b)
-             (if (and (= a 1) (= b 1)) 1 0))
-           byte1
-           byte2))
-
+(define (byte-and byte1 byte2)
+  (bitwise-and byte1 byte2 #xFF))
 (define (byte-or byte1 byte2)
-  (byte-op (lambda (a b)
-             (if (or (= a 1) (= b 1)) 1 0))
-           byte1
-           byte2))
-
+  (bitwise-and (bitwise-ior byte1 byte2) #xFF))
 (define (byte-xor byte1 byte2)
-  (byte-op (lambda (a b)
-             (if (xor (= a 1) (= b 1)) 1 0))
-           byte1
-           byte2))
+  (bitwise-and (bitwise-xor byte1 byte2) #xFF))
 
 (define (byte<< byte count) 
-  (byte-shift 
-   (lambda (bit-list)
-     (list-tail
-      (append bit-list (build-list count (lambda (a) 0)))
-      count))
-   byte count))
+  (bitwise-and #xFF
+               (arithmetic-shift byte count)))
 
 (define (byte>> byte count)
-  (integer>> byte count))
-
-(define (byte-shift bit-list-fun byte count)
-  (cond ((>= count 8) 0)
-        ((< count 0) (error "must be positive number " count))
-        ((= count 0) byte)
-        (else
-         (let ((bit-list (byte->bit-list byte)))
-           (bit-list->byte (bit-list-fun bit-list))))))
+  (bitwise-and #xFF
+               (arithmetic-shift byte (- count))))
 
 ;; integer ->bit-list
 (define (integer->bit-list value)
@@ -196,69 +167,24 @@
 
 ;; right shift
 (define (integer>> value count)
-  (define (iter product bit-list count)
-    (if (= count 0)
-        product
-        (iter (+ (* 2 product) (car bit-list))
-              (cdr bit-list)
-              (- count 1))))
-  (let ((bit-list (integer->bit-list value)))
-    (cond ((>= count (length bit-list)) 0)
-          ((= count 0) value)
-          ((< count 0) (error "positive"))
-          (else
-           (iter 0 bit-list (- (length bit-list)count))))))
+  (arithmetic-shift value (- count)))
            
 ;; left shift
 (define (integer<< value count)
-  (define (iter product count)
-    (if (= 0 count)
-        product
-        (iter (* product 2) (- count 1))))
-  (let ((bit-list (integer->bit-list value)))
-    (cond ((= count 0) value)
-          ((< count 0) (error "positive"))
-          (else (iter value count)))))
-
-(define (integer-bit-op op val1 val2)
-  (define (pre-add-0 bits count)
-    (if (= 0 count) bits
-        (pre-add-0 (cons 0 bits) (- count 1))))
-  (let ((bits1 (integer->bit-list val1))
-        (bits2 (integer->bit-list val2)))
-    (let ((expand-length (max (length bits1) (length bits2))))
-      (bit-list->integer 
-       (map op
-            (pre-add-0 bits1 (- expand-length (length bits1)))
-            (pre-add-0 bits2 (- expand-length (length bits2))))))))
+  (arithmetic-shift value count))
 
 ;; add
-(define (integer-add val1 val2)
-  (integer-bit-op (lambda (a b)
-                         (if (and (= a 1) (= b 1))
-                             1
-                             0))
-                  val1
-                  val2))
+(define (integer-and val1 val2)
+  (bitwise-and val1 val2))
 
 ;; or
 (define (integer-or val1 val2)
-  (integer-bit-op (lambda (a b)
-                         (if (or (= a 1) (= b 1))
-                             1
-                             0))
-                  val1
-                  val2))
+  (bitwise-ior val1 val2))
 
 ;; xor
 (define (integer-xor val1 val2)
-  (integer-bit-op (lambda (a b)
-                         (if (= a b)
-                             1
-                             0))
-                  val1
-                  val2))
-                    
+  (bitwise-xor val1 val2))
+
 ; integer->[byte]
 (define (integer->byte-list val)
   (define (iter bits product)
