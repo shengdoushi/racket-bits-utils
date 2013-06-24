@@ -13,13 +13,7 @@
 
 ;; 从一个int32数组中取值
 (define (int32-bytes-ref bytes pos)
-  (define (iter count product bytes)
-    (if (= 4 count)
-        product
-        (iter (+ count 1)
-              (int32-add (int32<< product 8) (bytes-ref bytes (- 3 count)))
-              bytes)))
-  (iter 0 0 (subbytes bytes (* pos 4) (+ (* pos 4) 4))))
+  (integer-bytes->integer (subbytes bytes (* pos 4) (+ (* pos 4) 4)) 4 #f))
 
 (define DELTA #x9E3779b9)
 

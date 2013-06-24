@@ -221,12 +221,4 @@
   (integer->int32 (arithmetic-shift val count)))
 
 (define (int32->bytes val)
-  (let ((buf (make-bytes 4))
-        (val (integer->int32 val)))
-    (bytes-set! buf 0 (bitwise-and val #x000000FF))
-    (bytes-set! buf 1 (int32>> (bitwise-and val #x0000FF00) 8))
-    (bytes-set! buf 2 (int32>> (bitwise-and val #x00FF0000) 16))
-    (bytes-set! buf 3 (int32>> (bitwise-and val #xFF000000) 24))
-    buf))
-  
-
+  (integer->integer-bytes val 4 #f))
